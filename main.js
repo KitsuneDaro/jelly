@@ -132,75 +132,6 @@ const deformTarget =
     );
 const restPositions = [];
 
-
-function createMesh() {
-
-    geometry = new THREE.BufferGeometry();
-
-    updateGeometry();
-
-    // const material = new THREE.ShaderMaterial({
-
-    //     uniforms: {
-
-    //         uTexture: {
-    //             value: texture
-    //         }
-    //     },
-
-    //     vertexShader: `
-
-    //         attribute vec2 displacement;
-
-    //         varying vec2 vUv;
-    //         varying vec2 vDisplacement;
-
-    //         void main() {
-
-    //             vUv = uv;
-
-    //             ////////////////////////////////////////////////////
-    //             // displacementをfragmentへ渡す
-    //             ////////////////////////////////////////////////////
-
-    //             vDisplacement = displacement;
-
-    //             gl_Position =
-    //                 projectionMatrix *
-    //                 modelViewMatrix *
-    //                 vec4(position, 1.0);
-    //         }
-    //     `,
-
-    //     fragmentShader: `
-
-    //         uniform sampler2D uTexture;
-
-    //         varying vec2 vUv;
-    //         varying vec2 vDisplacement;
-
-    //         void main() {
-
-    //             ////////////////////////////////////////////////////
-    //             // backward mapping
-    //             ////////////////////////////////////////////////////
-
-    //             vec2 sourceUv =
-    //                 vUv - vDisplacement;
-
-    //             vec4 color =
-    //                 texture2D(
-    //                     uTexture,
-    //                     sourceUv
-    //                 );
-
-    //             gl_FragColor = color;
-    //         }
-    //     `,
-
-    //     side: THREE.DoubleSide
-
-    // });
     const deformMaterial =
     new THREE.ShaderMaterial({
 
@@ -331,23 +262,92 @@ function createMesh() {
         transparent: true
     });
 
+const deformMesh =
+    new THREE.Mesh(
+        geometry,
+        deformMaterial
+    );
+
+const renderMesh =
+    new THREE.Mesh(
+        geometry,
+        renderMaterial
+    );
+
+function createMesh() {
+
+    geometry = new THREE.BufferGeometry();
+
+    updateGeometry();
+
+    // const material = new THREE.ShaderMaterial({
+
+    //     uniforms: {
+
+    //         uTexture: {
+    //             value: texture
+    //         }
+    //     },
+
+    //     vertexShader: `
+
+    //         attribute vec2 displacement;
+
+    //         varying vec2 vUv;
+    //         varying vec2 vDisplacement;
+
+    //         void main() {
+
+    //             vUv = uv;
+
+    //             ////////////////////////////////////////////////////
+    //             // displacementをfragmentへ渡す
+    //             ////////////////////////////////////////////////////
+
+    //             vDisplacement = displacement;
+
+    //             gl_Position =
+    //                 projectionMatrix *
+    //                 modelViewMatrix *
+    //                 vec4(position, 1.0);
+    //         }
+    //     `,
+
+    //     fragmentShader: `
+
+    //         uniform sampler2D uTexture;
+
+    //         varying vec2 vUv;
+    //         varying vec2 vDisplacement;
+
+    //         void main() {
+
+    //             ////////////////////////////////////////////////////
+    //             // backward mapping
+    //             ////////////////////////////////////////////////////
+
+    //             vec2 sourceUv =
+    //                 vUv - vDisplacement;
+
+    //             vec4 color =
+    //                 texture2D(
+    //                     uTexture,
+    //                     sourceUv
+    //                 );
+
+    //             gl_FragColor = color;
+    //         }
+    //     `,
+
+    //     side: THREE.DoubleSide
+
+    // });
+
     // mesh = new THREE.Mesh(
     //     geometry,
     //     material
     // );
     // scene.add(mesh);
-
-    const deformMesh =
-        new THREE.Mesh(
-            geometry,
-            deformMaterial
-        );
-
-    const renderMesh =
-        new THREE.Mesh(
-            geometry,
-            renderMaterial
-        );
 
     scene.add(renderMesh);
 }
@@ -828,8 +828,6 @@ function updatePhysics() {
     // vel_o.clone()
     pos_o.add(new_mean_pos_v.divideScalar(N_v).sub(old_mean_pos_v.divideScalar(N_v)).multiplyScalar(pos_o_resilience));
 
-    console.log(screenSize);
-
     //angle_o += dt;
 }
 
@@ -962,7 +960,7 @@ function animate() {
     // 本描画
     ////////////////////////////////////////////////////////
 
-    renderer.setRenderTarget(null);
+    renderer.setRenderTarget(renderMesh);
 
     renderer.render(scene, camera);
 }
