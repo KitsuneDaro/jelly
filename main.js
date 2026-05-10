@@ -327,7 +327,7 @@ function createMesh() {
                 ////////////////////////////////////////////////////
 
                 vec2 sourceUv =
-                    vUv - vDisplacement;
+                    vUv;// - vDisplacement;
 
                 vec4 color =
                     texture2D(
