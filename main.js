@@ -116,7 +116,7 @@ function next(i) {
 let geometry;
 let mesh;
 let texture = new THREE.TextureLoader().load(
-    './data/reimu.png~'
+    './data/image.png'
 );
 // const deformTarget =
 //     new THREE.WebGLRenderTarget(
