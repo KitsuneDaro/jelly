@@ -115,9 +115,23 @@ function next(i) {
 
 let geometry;
 let mesh;
-let texture = new THREE.TextureLoader().load(
+let imageTexture = new THREE.TextureLoader().load(
     './data/reimu.png'
 );
+const deformTarget =
+    new THREE.WebGLRenderTarget(
+        1024,
+        1024,
+        {
+            type: THREE.FloatType,
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter,
+            depthBuffer: false,
+            stencilBuffer: false
+        }
+    );
+const restPositions = [];
+
 
 function createMesh() {
 
@@ -125,108 +139,247 @@ function createMesh() {
 
     updateGeometry();
 
-    ////////////////////////////////////////////////////////
-    // ShaderMaterial
-    ////////////////////////////////////////////////////////
+    // const material = new THREE.ShaderMaterial({
 
-    const material = new THREE.ShaderMaterial({
+    //     uniforms: {
 
-        uniforms: {
+    //         uTexture: {
+    //             value: texture
+    //         }
+    //     },
 
-            uTexture: {
-                value: texture
-            }
-        },
+    //     vertexShader: `
+
+    //         attribute vec2 displacement;
+
+    //         varying vec2 vUv;
+    //         varying vec2 vDisplacement;
+
+    //         void main() {
+
+    //             vUv = uv;
+
+    //             ////////////////////////////////////////////////////
+    //             // displacementをfragmentへ渡す
+    //             ////////////////////////////////////////////////////
+
+    //             vDisplacement = displacement;
+
+    //             gl_Position =
+    //                 projectionMatrix *
+    //                 modelViewMatrix *
+    //                 vec4(position, 1.0);
+    //         }
+    //     `,
+
+    //     fragmentShader: `
+
+    //         uniform sampler2D uTexture;
+
+    //         varying vec2 vUv;
+    //         varying vec2 vDisplacement;
+
+    //         void main() {
+
+    //             ////////////////////////////////////////////////////
+    //             // backward mapping
+    //             ////////////////////////////////////////////////////
+
+    //             vec2 sourceUv =
+    //                 vUv - vDisplacement;
+
+    //             vec4 color =
+    //                 texture2D(
+    //                     uTexture,
+    //                     sourceUv
+    //                 );
+
+    //             gl_FragColor = color;
+    //         }
+    //     `,
+
+    //     side: THREE.DoubleSide
+
+    // });
+    const deformMaterial =
+    new THREE.ShaderMaterial({
 
         vertexShader: `
 
-            varying vec2 vUv;
+            attribute vec2 restPosition;
+
+            varying vec2 vRestPos;
 
             void main() {
 
-                vUv = uv;
+                vRestPos = restPosition;
 
                 gl_Position =
                     projectionMatrix *
                     modelViewMatrix *
-                    vec4(position, 1.0);
+                    vec4(position,1.0);
             }
         `,
 
         fragmentShader: `
 
-            uniform sampler2D uTexture;
+            varying vec2 vRestPos;
 
-            varying vec2 vUv;
+            uniform vec2 uMin;
+            uniform vec2 uMax;
 
             void main() {
 
+                ////////////////////////////////////////////////////
+                // rest座標を0-1へ正規化
+                ////////////////////////////////////////////////////
+
+                vec2 uv =
+                    (vRestPos - uMin)
+                    / (uMax - uMin);
+
+                ////////////////////////////////////////////////////
+                // RGBへ保存
+                ////////////////////////////////////////////////////
+
+                gl_FragColor =
+                    vec4(uv,0.0,1.0);
+            }
+        `,
+
+        uniforms: {
+
+            uMin: {
+                value: new THREE.Vector2()
+            },
+
+            uMax: {
+                value: new THREE.Vector2()
+            }
+        }
+    });
+    const renderMaterial =
+    new THREE.ShaderMaterial({
+
+        uniforms: {
+
+            uImage: {
+                value: imageTexture
+            },
+
+            uDeform: {
+                value: deformTarget.texture
+            }
+        },
+
+        vertexShader: `
+
+            varying vec2 vScreenUv;
+
+            void main() {
+
+                vec4 clip =
+                    projectionMatrix *
+                    modelViewMatrix *
+                    vec4(position,1.0);
+
+                gl_Position = clip;
+
+                ////////////////////////////////////////////////////
+                // screen uv
+                ////////////////////////////////////////////////////
+
+                vScreenUv =
+                    clip.xy / clip.w * 0.5 + 0.5;
+            }
+        `,
+
+        fragmentShader: `
+
+            uniform sampler2D uImage;
+            uniform sampler2D uDeform;
+
+            varying vec2 vScreenUv;
+
+            void main() {
+
+                ////////////////////////////////////////////////////
+                // deformation mapから
+                // 元位置取得
+                ////////////////////////////////////////////////////
+
+                vec2 restUv =
+                    texture2D(
+                        uDeform,
+                        vScreenUv
+                    ).xy;
+
+                ////////////////////////////////////////////////////
+                // 元画像参照
+                ////////////////////////////////////////////////////
+
                 vec4 color =
-                    texture2D(uTexture, vUv);
+                    texture2D(
+                        uImage,
+                        restUv
+                    );
 
                 gl_FragColor = color;
             }
         `,
 
-        side: THREE.DoubleSide
-
+        transparent: true
     });
 
-    mesh = new THREE.Mesh(
-        geometry,
-        material
-    );
+    // mesh = new THREE.Mesh(
+    //     geometry,
+    //     material
+    // );
+    // scene.add(mesh);
 
-    scene.add(mesh);
+    const deformMesh =
+        new THREE.Mesh(
+            geometry,
+            deformMaterial
+        );
+
+    const renderMesh =
+        new THREE.Mesh(
+            geometry,
+            renderMaterial
+        );
+
+    scene.add(renderMesh);
 }
-// function createMesh() {
-
-//     geometry = new THREE.BufferGeometry();
-
-//     updateGeometry();
-
-//     const material = new THREE.MeshBasicMaterial({
-//         color: 0x44aaff,
-//         side: THREE.DoubleSide,
-//         wireframe: false
-//     });
-
-//     mesh = new THREE.Mesh(geometry, material);
-
-//     scene.add(mesh);
-// }
 
 function updateGeometry() {
 
     const vertices = [];
     const uvs = [];
+    const displacements = [];
 
     ////////////////////////////////////////////////////////
-    // UV計算用境界
+    // UV用BBox
     ////////////////////////////////////////////////////////
 
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-
-    for (let i = 0; i < N_v; i++) {
-
-        minX = Math.min(minX, pos_v0[i].x);
-        maxX = Math.max(maxX, pos_v0[i].x);
-
-        minY = Math.min(minY, pos_v0[i].y);
-        maxY = Math.max(maxY, pos_v0[i].y);
-    }
+    // vertex_data.datの時点で既に大きさは揃えられているため、求める必要はなし
+    let minX = -1;
+    let maxX = 1;
+    let minY = -1;
+    let maxY = 1;
 
     const sizeX = maxX - minX;
     const sizeY = maxY - minY;
 
     ////////////////////////////////////////////////////////
-    // 頂点
+    // 頂点生成
     ////////////////////////////////////////////////////////
 
     for (let i = 0; i < N_v; i++) {
+
+        ////////////////////////////////////////////////////
+        // position
+        ////////////////////////////////////////////////////
 
         vertices.push(
             pos_v[i].x,
@@ -234,8 +387,13 @@ function updateGeometry() {
             0
         );
 
+        restPositions.push(
+            pos_v0[i].x,
+            pos_v0[i].y
+        );
+
         ////////////////////////////////////////////////////
-        // UV
+        // uv
         ////////////////////////////////////////////////////
 
         const u =
@@ -245,10 +403,29 @@ function updateGeometry() {
             (pos_v0[i].y - minY) / sizeY;
 
         uvs.push(u, v);
+
+        ////////////////////////////////////////////////////
+        // displacement
+        ////////////////////////////////////////////////////
+
+        const displacement =
+            pos_v[i]
+                .clone()
+                .sub(pos_o)
+                .sub(pos_v0[i]);
+
+        ////////////////////////////////////////////////////
+        // UV空間へ変換
+        ////////////////////////////////////////////////////
+
+        displacements.push(
+            displacement.x / sizeX,
+            displacement.y / sizeY
+        );
     }
 
     ////////////////////////////////////////////////////////
-    // Index
+    // index
     ////////////////////////////////////////////////////////
 
     const indices = [];
@@ -268,44 +445,27 @@ function updateGeometry() {
         new THREE.Float32BufferAttribute(uvs, 2)
     );
 
+    geometry.setAttribute(
+        'displacement',
+        new THREE.Float32BufferAttribute(displacements, 2)
+    );
+
+    geometry.setAttribute(
+    'restPosition',
+        new THREE.Float32BufferAttribute(
+            restPositions,
+            2
+        )
+    );
+
     geometry.setIndex(indices);
 
     geometry.computeVertexNormals();
 
     geometry.attributes.position.needsUpdate = true;
     geometry.attributes.uv.needsUpdate = true;
+    geometry.attributes.displacement.needsUpdate = true;
 }
-// function updateGeometry() {
-
-//     const vertices = [];
-
-//     for (let i = 0; i < N_v; i++) {
-
-//         vertices.push(
-//             pos_v[i].x,
-//             pos_v[i].y,
-//             0
-//         );
-//     }
-
-//     const indices = [];
-
-//     for (let i = 1; i < N_v - 1; i++) {
-
-//         indices.push(0, i, i + 1);
-//     }
-
-//     geometry.setAttribute(
-//         'position',
-//         new THREE.Float32BufferAttribute(vertices, 3)
-//     );
-
-//     geometry.setIndex(indices);
-
-//     geometry.computeVertexNormals();
-
-//     geometry.attributes.position.needsUpdate = true;
-// }
 
 ////////////////////////////////////////////////////////////
 // 面積
@@ -765,6 +925,16 @@ renderer.domElement.addEventListener(
 // Loop
 ////////////////////////////////////////////////////////////
 
+// function animate() {
+
+//     requestAnimationFrame(animate);
+
+//     updatePhysics();
+
+//     updateGeometry();
+
+//     renderer.render(scene, camera);
+// }
 function animate() {
 
     requestAnimationFrame(animate);
@@ -772,6 +942,27 @@ function animate() {
     updatePhysics();
 
     updateGeometry();
+
+    ////////////////////////////////////////////////////////
+    // Pass1
+    // deformation map生成
+    ////////////////////////////////////////////////////////
+
+    renderer.setRenderTarget(
+        deformTarget
+    );
+
+    renderer.render(
+        new THREE.Scene().add(deformMesh),
+        camera
+    );
+
+    ////////////////////////////////////////////////////////
+    // Pass2
+    // 本描画
+    ////////////////////////////////////////////////////////
+
+    renderer.setRenderTarget(null);
 
     renderer.render(scene, camera);
 }
