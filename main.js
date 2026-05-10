@@ -115,164 +115,164 @@ function next(i) {
 
 let geometry;
 let mesh;
-let imageTexture = new THREE.TextureLoader().load(
-    './data/reimu.png'
+let texture = new THREE.TextureLoader().load(
+    './data/reimu.png~'
 );
-const deformTarget =
-    new THREE.WebGLRenderTarget(
-        1024,
-        1024,
-        {
-            type: THREE.FloatType,
-            minFilter: THREE.LinearFilter,
-            magFilter: THREE.LinearFilter,
-            depthBuffer: false,
-            stencilBuffer: false
-        }
-    );
-const restPositions = [];
+// const deformTarget =
+//     new THREE.WebGLRenderTarget(
+//         1024,
+//         1024,
+//         {
+//             type: THREE.FloatType,
+//             minFilter: THREE.LinearFilter,
+//             magFilter: THREE.LinearFilter,
+//             depthBuffer: false,
+//             stencilBuffer: false
+//         }
+//     );
+// const restPositions = [];
 
-    const deformMaterial =
-    new THREE.ShaderMaterial({
+//     const deformMaterial =
+//     new THREE.ShaderMaterial({
 
-        vertexShader: `
+//         vertexShader: `
 
-            attribute vec2 restPosition;
+//             attribute vec2 restPosition;
 
-            varying vec2 vRestPos;
+//             varying vec2 vRestPos;
 
-            void main() {
+//             void main() {
 
-                vRestPos = restPosition;
+//                 vRestPos = restPosition;
 
-                gl_Position =
-                    projectionMatrix *
-                    modelViewMatrix *
-                    vec4(position,1.0);
-            }
-        `,
+//                 gl_Position =
+//                     projectionMatrix *
+//                     modelViewMatrix *
+//                     vec4(position,1.0);
+//             }
+//         `,
 
-        fragmentShader: `
+//         fragmentShader: `
 
-            varying vec2 vRestPos;
+//             varying vec2 vRestPos;
 
-            uniform vec2 uMin;
-            uniform vec2 uMax;
+//             uniform vec2 uMin;
+//             uniform vec2 uMax;
 
-            void main() {
+//             void main() {
 
-                ////////////////////////////////////////////////////
-                // rest座標を0-1へ正規化
-                ////////////////////////////////////////////////////
+//                 ////////////////////////////////////////////////////
+//                 // rest座標を0-1へ正規化
+//                 ////////////////////////////////////////////////////
 
-                vec2 uv =
-                    (vRestPos - uMin)
-                    / (uMax - uMin);
+//                 vec2 uv =
+//                     (vRestPos - uMin)
+//                     / (uMax - uMin);
 
-                ////////////////////////////////////////////////////
-                // RGBへ保存
-                ////////////////////////////////////////////////////
+//                 ////////////////////////////////////////////////////
+//                 // RGBへ保存
+//                 ////////////////////////////////////////////////////
 
-                gl_FragColor =
-                    vec4(uv,0.0,1.0);
-            }
-        `,
+//                 gl_FragColor =
+//                     vec4(uv,0.0,1.0);
+//             }
+//         `,
 
-        uniforms: {
+//         uniforms: {
 
-            uMin: {
-                value: new THREE.Vector2()
-            },
+//             uMin: {
+//                 value: new THREE.Vector2()
+//             },
 
-            uMax: {
-                value: new THREE.Vector2()
-            }
-        }
-    });
-    const renderMaterial =
-    new THREE.ShaderMaterial({
+//             uMax: {
+//                 value: new THREE.Vector2()
+//             }
+//         }
+//     });
+//     const renderMaterial =
+//     new THREE.ShaderMaterial({
 
-        uniforms: {
+//         uniforms: {
 
-            uImage: {
-                value: imageTexture
-            },
+//             uImage: {
+//                 value: imageTexture
+//             },
 
-            uDeform: {
-                value: deformTarget.texture
-            }
-        },
+//             uDeform: {
+//                 value: deformTarget.texture
+//             }
+//         },
 
-        vertexShader: `
+//         vertexShader: `
 
-            varying vec2 vScreenUv;
+//             varying vec2 vScreenUv;
 
-            void main() {
+//             void main() {
 
-                vec4 clip =
-                    projectionMatrix *
-                    modelViewMatrix *
-                    vec4(position,1.0);
+//                 vec4 clip =
+//                     projectionMatrix *
+//                     modelViewMatrix *
+//                     vec4(position,1.0);
 
-                gl_Position = clip;
+//                 gl_Position = clip;
 
-                ////////////////////////////////////////////////////
-                // screen uv
-                ////////////////////////////////////////////////////
+//                 ////////////////////////////////////////////////////
+//                 // screen uv
+//                 ////////////////////////////////////////////////////
 
-                vScreenUv =
-                    clip.xy / clip.w * 0.5 + 0.5;
-            }
-        `,
+//                 vScreenUv =
+//                     clip.xy / clip.w * 0.5 + 0.5;
+//             }
+//         `,
 
-        fragmentShader: `
+//         fragmentShader: `
 
-            uniform sampler2D uImage;
-            uniform sampler2D uDeform;
+//             uniform sampler2D uImage;
+//             uniform sampler2D uDeform;
 
-            varying vec2 vScreenUv;
+//             varying vec2 vScreenUv;
 
-            void main() {
+//             void main() {
 
-                ////////////////////////////////////////////////////
-                // deformation mapから
-                // 元位置取得
-                ////////////////////////////////////////////////////
+//                 ////////////////////////////////////////////////////
+//                 // deformation mapから
+//                 // 元位置取得
+//                 ////////////////////////////////////////////////////
 
-                vec2 restUv =
-                    texture2D(
-                        uDeform,
-                        vScreenUv
-                    ).xy;
+//                 vec2 restUv =
+//                     texture2D(
+//                         uDeform,
+//                         vScreenUv
+//                     ).xy;
 
-                ////////////////////////////////////////////////////
-                // 元画像参照
-                ////////////////////////////////////////////////////
+//                 ////////////////////////////////////////////////////
+//                 // 元画像参照
+//                 ////////////////////////////////////////////////////
 
-                vec4 color =
-                    texture2D(
-                        uImage,
-                        restUv
-                    );
+//                 vec4 color =
+//                     texture2D(
+//                         uImage,
+//                         restUv
+//                     );
 
-                gl_FragColor = color;
-            }
-        `,
+//                 gl_FragColor = color;
+//             }
+//         `,
 
-        transparent: true
-    });
+//         transparent: true
+//     });
 
-const deformMesh =
-    new THREE.Mesh(
-        geometry,
-        deformMaterial
-    );
+// const deformMesh =
+//     new THREE.Mesh(
+//         geometry,
+//         deformMaterial
+//     );
 
-const renderMesh =
-    new THREE.Mesh(
-        geometry,
-        renderMaterial
-    );
+// const renderMesh =
+//     new THREE.Mesh(
+//         geometry,
+//         renderMaterial
+//     );
 
 function createMesh() {
 
@@ -280,76 +280,76 @@ function createMesh() {
 
     updateGeometry();
 
-    // const material = new THREE.ShaderMaterial({
+    const material = new THREE.ShaderMaterial({
 
-    //     uniforms: {
+        uniforms: {
 
-    //         uTexture: {
-    //             value: texture
-    //         }
-    //     },
+            uTexture: {
+                value: texture
+            }
+        },
 
-    //     vertexShader: `
+        vertexShader: `
 
-    //         attribute vec2 displacement;
+            attribute vec2 displacement;
 
-    //         varying vec2 vUv;
-    //         varying vec2 vDisplacement;
+            varying vec2 vUv;
+            varying vec2 vDisplacement;
 
-    //         void main() {
+            void main() {
 
-    //             vUv = uv;
+                vUv = uv;
 
-    //             ////////////////////////////////////////////////////
-    //             // displacementをfragmentへ渡す
-    //             ////////////////////////////////////////////////////
+                ////////////////////////////////////////////////////
+                // displacementをfragmentへ渡す
+                ////////////////////////////////////////////////////
 
-    //             vDisplacement = displacement;
+                vDisplacement = displacement;
 
-    //             gl_Position =
-    //                 projectionMatrix *
-    //                 modelViewMatrix *
-    //                 vec4(position, 1.0);
-    //         }
-    //     `,
+                gl_Position =
+                    projectionMatrix *
+                    modelViewMatrix *
+                    vec4(position, 1.0);
+            }
+        `,
 
-    //     fragmentShader: `
+        fragmentShader: `
 
-    //         uniform sampler2D uTexture;
+            uniform sampler2D uTexture;
 
-    //         varying vec2 vUv;
-    //         varying vec2 vDisplacement;
+            varying vec2 vUv;
+            varying vec2 vDisplacement;
 
-    //         void main() {
+            void main() {
 
-    //             ////////////////////////////////////////////////////
-    //             // backward mapping
-    //             ////////////////////////////////////////////////////
+                ////////////////////////////////////////////////////
+                // backward mapping
+                ////////////////////////////////////////////////////
 
-    //             vec2 sourceUv =
-    //                 vUv - vDisplacement;
+                vec2 sourceUv =
+                    vUv - vDisplacement;
 
-    //             vec4 color =
-    //                 texture2D(
-    //                     uTexture,
-    //                     sourceUv
-    //                 );
+                vec4 color =
+                    texture2D(
+                        uTexture,
+                        sourceUv
+                    );
 
-    //             gl_FragColor = color;
-    //         }
-    //     `,
+                gl_FragColor = color;
+            }
+        `,
 
-    //     side: THREE.DoubleSide
+        side: THREE.DoubleSide
 
-    // });
+    });
 
-    // mesh = new THREE.Mesh(
-    //     geometry,
-    //     material
-    // );
-    // scene.add(mesh);
+    mesh = new THREE.Mesh(
+        geometry,
+        material
+    );
+    scene.add(mesh);
 
-    scene.add(renderMesh);
+    // scene.add(renderMesh);
 }
 
 function updateGeometry() {
@@ -387,10 +387,10 @@ function updateGeometry() {
             0
         );
 
-        restPositions.push(
-            pos_v0[i].x,
-            pos_v0[i].y
-        );
+        // restPositions.push(
+        //     pos_v0[i].x,
+        //     pos_v0[i].y
+        // );
 
         ////////////////////////////////////////////////////
         // uv
@@ -450,13 +450,13 @@ function updateGeometry() {
         new THREE.Float32BufferAttribute(displacements, 2)
     );
 
-    geometry.setAttribute(
-    'restPosition',
-        new THREE.Float32BufferAttribute(
-            restPositions,
-            2
-        )
-    );
+    // geometry.setAttribute(
+    //     'restPosition',
+    //     new THREE.Float32BufferAttribute(
+    //         restPositions,
+    //         2
+    //     )
+    // );
 
     geometry.setIndex(indices);
 
@@ -923,16 +923,6 @@ renderer.domElement.addEventListener(
 // Loop
 ////////////////////////////////////////////////////////////
 
-// function animate() {
-
-//     requestAnimationFrame(animate);
-
-//     updatePhysics();
-
-//     updateGeometry();
-
-//     renderer.render(scene, camera);
-// }
 function animate() {
 
     requestAnimationFrame(animate);
@@ -941,28 +931,38 @@ function animate() {
 
     updateGeometry();
 
-    ////////////////////////////////////////////////////////
-    // Pass1
-    // deformation map生成
-    ////////////////////////////////////////////////////////
-
-    renderer.setRenderTarget(
-        deformTarget
-    );
-
-    renderer.render(
-        new THREE.Scene().add(deformMesh),
-        camera
-    );
-
-    ////////////////////////////////////////////////////////
-    // Pass2
-    // 本描画
-    ////////////////////////////////////////////////////////
-
-    renderer.setRenderTarget(renderMesh);
-
     renderer.render(scene, camera);
 }
+// function animate() {
+
+//     requestAnimationFrame(animate);
+
+//     updatePhysics();
+
+//     updateGeometry();
+
+//     ////////////////////////////////////////////////////////
+//     // Pass1
+//     // deformation map生成
+//     ////////////////////////////////////////////////////////
+
+//     renderer.setRenderTarget(
+//         deformTarget
+//     );
+
+//     renderer.render(
+//         new THREE.Scene().add(deformMesh),
+//         camera
+//     );
+
+//     ////////////////////////////////////////////////////////
+//     // Pass2
+//     // 本描画
+//     ////////////////////////////////////////////////////////
+
+//     renderer.setRenderTarget(renderMesh);
+
+//     renderer.render(scene, camera);
+// }
 
 init();
